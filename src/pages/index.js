@@ -4,7 +4,6 @@ import L from 'leaflet';
 import Layout from 'components/Layout';
 import Container from 'components/Container';
 import Map from 'components/Map';
-import { aqua } from 'color-name';
 
 const LOCATION = {
   lat: 38.9072,
@@ -30,6 +29,52 @@ const IndexPage = () => {
       console.log(`Failed to find Santa!: ${e}`);
     }
     console.log('routeJson', routeJson);
+
+    const { destinations = [] } = routeJson || {};
+    const destinationsVisited = destinations.filter(({arrival}) => arrival < Date.now());
+    const destinationsWithPresents = destinationsVisited.filter(({presentsDelivered}) => presentsDelivered > 0);
+    if ( destinationsWithPresents.length === 0 ) {
+      // Create a Leaflet Market instance using Santa's LatLng location
+      const center = new L.LatLng( 0, 0 );
+      const noSanta = L.marker( center, {
+        icon: L.divIcon({
+          className: 'icon',
+          html: `<div class="icon-santa">🎅</div>`,
+          iconSize: 50
+        })
+      });
+      noSanta.addTo( leafletElement );
+      noSanta.bindPopup( `Santa's still at the North Pole!` );
+      noSanta.openPopup();
+      return;
+    }
+
+    const lastKnownDestination = destinationsWithPresents[destinationsWithPresents.length - 1]
+  
+    const santaLocation = new L.LatLng( lastKnownDestination.location.lat, lastKnownDestination.location.lng );
+    const santaMarker = L.marker( santaLocation, {
+      icon: L.divIcon({
+        className: 'icon',
+        html: `<div class="icon-santa">🎅</div>`,
+        iconSize: 50
+      })
+    });
+
+    santaMarker.addTo(leafletElement);
+    const santasRouteLatLngs = destinationsWithPresents.map(destination => {
+      const { location } = destination;
+      const { lat, lng } = location;
+      return new L.LatLng( lat, lng );
+    });
+    const santasRoute = new L.Polyline( santasRouteLatLngs, {
+      weight: 2,
+      color: 'green',
+      opacity: 1,
+      fillColor: 'green',
+      fillOpacity: 0.5
+    });
+
+    santasRoute.addTo(leafletElement);
   }
 
   const mapSettings = {
